@@ -1,13 +1,55 @@
+import argparse
 import os
 import shutil
 import sys
+import logging
 
-def sort_files_by_extension(target_directory):
+
+def create_sorted_folder(target_directory):
     sorted_folder = os.path.join(target_directory, 'SortedFiles')
     if not os.path.exists(sorted_folder):
         os.makedirs(sorted_folder)
 
+
+def get_category_for_extension(file_extension, common_extensions):
+    for category, extensions in common_extensions.items():
+        if file_extension.lower() in extensions:
+            return category
+
+    return 'Other'
+
+
+def sort_files(target_directory, common_extensions):
     files = [file for file in os.listdir(target_directory) if os.path.isfile(os.path.join(target_directory, file))]
+
+    for file in files:
+        file_path = os.path.join(target_directory, file)
+        _, file_extension = os.path.splitext(file)
+
+        category = get_category_for_extension(file_extension, common_extensions)
+        destination_folder = os.path.join(target_directory, 'SortedFiles', category)
+
+        if not os.path.exists(destination_folder):
+            os.makedirs(destination_folder)
+
+        shutil.move(file_path, os.path.join(destination_folder, file))
+        logging.info(f"Move {file} to {destination_folder}...")
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Sort file in a directory by extension.')
+    parser.add_argument('target_directory', help='The directory containing files to be sorted.')
+    args = parser.parse_args()
+
+    target_directory = args.target_directory
+
+    if not os.path.exists(target_directory):
+        logging.error(f"The specified directory '{target_directory}' does not exist.")
+        return
+
+    logging.info(f"Sorting files in {target_directory}...")
+
+    create_sorted_folder(target_directory)
 
     common_extensions = {
         'Images': ['.png', '.heic', '.jpeg', '.jpg', '.gif', '.bmp', '.webp', '.svg'],
@@ -19,35 +61,11 @@ def sort_files_by_extension(target_directory):
         'Text': ['.txt', '.json', '.csv', '.yaml', '.html'],
     }
 
-    for file in files:
-        file_path = os.path.join(target_directory, file)
+    sort_files(target_directory, common_extensions)
 
-        _, file_extension = os.path.splitext(file)
+    logging.info("Sorting complete...")
 
-        found = False
-        for category, extensions in common_extensions.items():
-            if file_extension.lower() in extensions:
-                destination_folder = os.path.join(sorted_folder, category)
-                found = True
-                break
-
-        if not found:
-            destination_folder = os.path.join(sorted_folder, 'Other')
-
-        if not os.path.exists(destination_folder):
-            os.makedirs(destination_folder)
-
-        shutil.move(file_path, os.path.join(destination_folder, file))
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python file-sorter.py <target_directory>")
-        sys.exit(1)
-
-    target_directory = sys.argv[1]
-
-    if not os.path.exists(target_directory):
-        print(f"Error: The specified directory '{target_directory}' doesn't exist.")
-        sys.exit(1)
-
-    sort_files_by_extension(target_directory)
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    main()
